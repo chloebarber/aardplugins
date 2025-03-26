@@ -1,0 +1,62 @@
+interrogate dove
+As you mercilessly interrogate a white dove, you learn ...
+----------------------------------------------------------------
+Mob Short Name   : a white dove
+Mob Base Level   : 90
+Guild            : Mage
+Subclass         : Enchanter
+Identical Mobs   : 16
+Times Killed     : 1276
+Mob Hp           :    5589/5589   
+Alignment        : a white dove is grey.
+Note             : Target has a special function of some kind.
+----------------------------------------------------------------
+
+
+interrogate guard
+You failed to interrogate an Arisian guard.
+
+
+interrogate guard
+You try to interrogate an Arisian guard but only make him angry.
+
+
+As you mercilessly interrogate a Cloud of Air, you learn ...
+----------------------------------------------------------------
+Mob Short Name   : a Cloud of Air
+Mob Base Level   : 171
+Guild            : Psionicist
+Subclass         : Navigator
+Identical Mobs   : 1
+Times Killed     : 671
+Mob Hp           :   17292/17292  
+Alignment        : a Cloud of Air is a Lord of Angels.
+Note             : Target has a special function of some kind.
+------------------------- [ Resistances ] ----------------------
+Acid            :    0.4%      Air             :    0.4% 
+Cold            :    0.4%      Disease         :    0.4% 
+Earth           :    0.4%      Energy          :    0.4% 
+Fire            :    0.4%      Holy            :    0.4% 
+Light           :    0.4%      Electric        :    0.4% 
+Magic           :    0.4%      Mental          :    0.4% 
+Negative        :    0.4%      Poison          :    0.4% 
+Shadow          :    0.4%      Sonic           :    0.4% 
+Water           :    0.4%      
+----------------------------------------------------------------
+
+
+inter golem
+As you mercilessly interrogate a Stone Golem, you learn ...
+----------------------------------------------------------------
+Mob Short Name   : a Stone Golem
+Mob Base Level   : 173
+Guild            : Warrior
+Subclass         : Soldier
+Identical Mobs   : 2
+Times Killed     : 432
+Mob Hp           :   16029/16029  
+Alignment        : a Stone Golem is a Lord of Angels.
+Note             : Target has a special function of some kind.
+------------------------- [ Resistances ] ----------------------
+Cold            :    7.2%      Fire            :    7.2% 
+----------------------------------------------------------------
