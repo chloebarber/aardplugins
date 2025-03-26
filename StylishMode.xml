@@ -114,7 +114,7 @@ function AutoPotion() -- add a potion check before enabling
 end
 
 function AutoDrink()
-   if character.stats.hunger < 50 or character.stats.thirst < 50 then
+   if tonumber(gmcp_char.status.hunger) < 50 or tonumber(gmcp_char.status.thirst) < 50 then
       Send("gulp " .. GetVariable("drink_container"))
    end
 end
