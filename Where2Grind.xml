@@ -213,7 +213,7 @@ function OnPluginBroadcast (msg, id, name, text)
   <trigger
    enabled="y"
    group="table_capture"
-   match="([0-9]+)  ([^\s]+( [^\s]*)+)\s+[0-9]+"
+   match="([0-9]+)  (([,'\w]+\s?)+)\s+[0-9]+"
    omit_from_output="y"
    regexp="y"
    send_to="12"
