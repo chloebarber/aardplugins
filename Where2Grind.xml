@@ -129,13 +129,32 @@ function ClickableGoto(zone)
     return Hyperlink("runto " .. "poopy", "Run here")
 end
 
+function FormatLines(key, val)
+    while string.len(key) < 20 do -- makes all string lengths the same to line up the table
+        key = key .. " "
+    end
+    while string.len(val[1]) < 3 do
+        val[1] = " " .. val[1]
+    end
+    while string.len(val[2]) < 3 do
+        val[2] = val[2] .. " "
+    end
+    while string.len(val[3]) < 5 do
+        val[3] = " " .. val[3]
+    end
+    return key, val
+end
+
 function ProcessData()
     EnableTriggerGroup("table_capture", false)
     table.sort(death_table, compare)
     
     W2GWindow:clear()
+    W2GWindow:add_text("  Range            Zone           Density ")
+    W2GWindow:add_text("---------  --------------------  ---------")
     for key, val in pairs(death_table) do
-        W2GWindow:add_text(val[1] .. " - " .. val[2] .. "   " .. key .. " (Density:" .. val[3] .. ")")
+        key, val = FormatLines(key, val)
+        W2GWindow:add_text(val[1] .. " - " .. val[2] .. "  " .. key .. "  " .. val[3])
     end
     W2GWindow:draw()
     Note("data processed")
@@ -213,7 +232,7 @@ function OnPluginBroadcast (msg, id, name, text)
   <trigger
    enabled="y"
    group="table_capture"
-   match="([0-9]+)  (([,'\w]+\s?)+)\s+[0-9]+"
+   match="([0-9]+)  (([,'\-\w]\s?)+)(?<!\s)"
    omit_from_output="y"
    regexp="y"
    send_to="12"
