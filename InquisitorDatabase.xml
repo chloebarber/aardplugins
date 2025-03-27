@@ -201,7 +201,7 @@ end
   <trigger
    enabled="n"
    group="capture_entry"
-   match="([^\s]+)[\s:]+([0-9\.]+)%"
+   match="([^\s]+)[\s:]+([0-9\-\.]+)%"
    omit_from_output="y"
    keep_evaluating="y"
    sequence="100"
