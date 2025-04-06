@@ -32,38 +32,81 @@
 <script>
 <![CDATA[
 
-mob = {} -- 
+mob = {
+uniqid = "", 
+name = "", 
+room = "", 
+zone = "", 
+level = 0, 
+guild = "", 
+subclass = "", 
+alignment = "", 
+bash = 0.0, 
+pierce = 0.0, 
+slash = 0.0, 
+acid = 0.0, 
+air = 0.0, 
+cold = 0.0, 
+disease = 0.0, 
+earth = 0.0, 
+energy = 0.0, 
+fire = 0.0, 
+holy = 0.0, 
+light = 0.0, 
+electric = 0.0, 
+magic = 0.0, 
+mental = 0.0, 
+negative = 0.0, 
+poison = 0.0, 
+shadow = 0.0, 
+sonic = 0.0, 
+water = 0.0, 
+bash = 0.0
+}
 
-<!-- 
-Name
-Room
-Zone
-Level
-Guild
-Subclass
-Alignment
-ResistanceList
-Bash
-Pierce
-Slash
-Acid
-Air
-Cold
-Disease
-Earth
-Energy
-Fire
-Holy
-Light
-Electric ("Lighting"?)
-Magic
-Mental
-Negative
-Poison
-Shadow
-Sonic
-Water
- -->
+function OnPluginInstall()
+  GenTable()
+end
+
+function GenTable()
+  DatabaseOpen("db", GetInfo(66) .. "inquisitor.sqlite", 6)
+  Note("Opened DB")
+  DatabaseExec ("db", [[
+    DROP TABLE IF EXISTS mobs;
+    CREATE TABLE mobs(
+        uniqid TEXT NOT NULL PRIMARY KEY,
+        name      TEXT NOT NULL,
+        room      TEXT NOT NULL,
+        zone      TEXT NOT NULL,
+        level     INT NOT NULL
+        guild      TEXT NOT NULL,
+        subclass      TEXT NOT NULL,
+        alignment   TEXT NOT NULL,
+        bash    REAL,
+        pierce    REAL,
+        slash    REAL,
+        acid    REAL,
+        air    REAL,
+        cold    REAL,
+        disease    REAL,
+        earth    REAL,
+        energy    REAL,
+        fire    REAL,
+        holy    REAL,
+        light    REAL,
+        electric     REAL,
+        magic    REAL,
+        mental    REAL,
+        negative    REAL,
+        poison    REAL,
+        shadow    REAL,
+        sonic    REAL,
+        water    REAL
+      );
+      ]])
+  DatabaseClose("db")
+  Note("Closed DB")
+end
 
 function InterrogationSuccessful()
   mob = {}
@@ -77,7 +120,7 @@ function Capture(flag, data)
   mob[flag] = data
 end
 
-CaptureResist("name", data)
+function CaptureResist(name, data)
   sorted = {}
   --we're just capturing these separately to build an easily sorted list
   --ordering resists on capture reduces complexity of weakpoint analysis on run I think
@@ -101,7 +144,7 @@ function CheckIfCatalogued(name)
   --check if name + room + zone exists
   catalogued = "false" -- make this the lookup instead
   if catalogued == false then
-    --enable alias to interrogate
+    iq = 0 --enable alias to interrogate
   end
 end
 
@@ -111,9 +154,6 @@ end
 
 ]]>
 </script>
-
-
-</muclient>
 
 <!--  Triggers  -->
 
@@ -189,7 +229,7 @@ end
    omit_from_output="y"
    sequence="100"
   >
-  </trigger> -- we're just throwing away the notes
+  </trigger> -- we're just throwing away the notes, they're too general to be useful
   <trigger
    enabled="n"
    group="capture_entry"
@@ -220,150 +260,5 @@ end
   </trigger>
 </triggers>
 
+</muclient>
 
-<!-- 
-Example of creating a database
-
-
-db = "mainDatabase"  -- internal identifier
-
-DatabaseOpen (db, GetInfo (66) .. "mytestdb.sqlite", 6)
-
-DatabaseExec (db, [[
-DROP TABLE IF EXISTS weapons;
-CREATE TABLE weapons(
-        weapon_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        name      TEXT NOT NULL,
-        damage    INT DEFAULT 10,
-        weight    REAL
-      );
-      ]])
-      
-DatabaseClose (db)  -- close it
-
-
-
-It is better to check the result from calling functions like DatabaseExec, otherwise they may silently fail (eg, with an SQL syntax error) like this:
-
-
-status = DatabaseExec (db, [[
-DROP TABLE IF EXISTS weapons;
-CREATE TABLE weapons(
-        weapon_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        name      TEXT NOT NULL,
-        damage    INT DEFAULT 10,
-        weight    REAL
-      );
-      ]])
-      
-if status ~= sqlite3.OK then
-  print ("Error creating weapons table: ", DatabaseError(db))
-end -- if not OK
-
-
-
-The documentation for DatabaseExec suggests a function (dbcheck) which can be used as a generic return-code checker. 
-
-
-
--------------Example of adding a row of data
-
-
-DatabaseExec (db, "INSERT INTO weapons (name, damage) VALUES ('Nick''s sword', 42)")
-
-
-
-Note that if you need to use quotes inside a string, the quotes must be doubled, as shown above.
-
-
-
-----------Example of selecting some rows and displaying them
-
-As described above, you need to "prepare" the SQL statement first. Once prepared you can find how many columns are in it, and the column names.
-
-Then you "step" through the rows, one by one, getting the column values. These can then be printed, saved, or acted up.
-
-Finally you "finalize" the SQL statement, releasing it so you can do another operation.
-
-
--- prepare a query
-DatabasePrepare (db, "SELECT * FROM weapons ORDER BY name")
-
--- find the column names
-names = DatabaseColumnNames (db)
-
--- find how many columns there are
-cols = DatabaseColumns (db)
-
--- step to get the first row
-rc = DatabaseStep (db)  -- read first row
-
--- now loop, displaying each row, and getting the next one
-while rc == sqlite3.ROW do
-  
-  print ("")
-  values = DatabaseColumnValues (db)
-
-  for i = 1, cols do
-    print (names [i], "=", values [i])
-  end -- for each column
-
-  rc = DatabaseStep (db)  -- read next row
-
-end -- while loop
-
--- finished with the statement
-DatabaseFinalize (db)
-
-
-
-You should really check the return code from DatabasePrepare in case you have an error in the SQL statement, as shown above for DatabaseExec.
-
------------full Example using the Lua interface
-
-
-require "tprint"
-
--- make in-memory database
-db = sqlite3.open_memory()
-
--- make a table for testing
-db:exec  [[
-          CREATE TABLE mobs (name, class, hp);
-          INSERT INTO mobs VALUES("Naga", "mage", 666);
-          INSERT INTO mobs VALUES("Wolf", "beast", 42);
-          INSERT INTO mobs VALUES("Guard", "warrior", 100);
-       ]]
-
--- prepare a SELECT statement
-local stmt = db:prepare ("SELECT * FROM mobs")
-
--- loop until we get everything
-while true do
-
-  local result = stmt:step ()
-
-  -- exit loop if done
-  if result == sqlite3.DONE then
-    break
-  end -- if done
-
-  -- should have ROW result
-  assert (result == sqlite3.ROW, "Row not found")
-
-  -- get all values into a table
-  local row = stmt:get_named_values()
-
-  -- display them
-  print (string.rep ("-", 20))
-  tprint (row)
-  
-end -- while
-
--- done with this statement
-stmt:finalize ()
-
--- finished with database
-db:close ()
-
--->
