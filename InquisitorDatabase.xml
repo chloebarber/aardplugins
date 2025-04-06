@@ -32,48 +32,59 @@
 <script>
 <![CDATA[
 
-mob = {
-uniqid = "", 
-name = "", 
-room = "", 
-zone = "", 
-level = 0, 
-guild = "", 
-subclass = "", 
-alignment = "", 
-bash = 0.0, 
-pierce = 0.0, 
-slash = 0.0, 
-acid = 0.0, 
-air = 0.0, 
-cold = 0.0, 
-disease = 0.0, 
-earth = 0.0, 
-energy = 0.0, 
-fire = 0.0, 
-holy = 0.0, 
-light = 0.0, 
-electric = 0.0, 
-magic = 0.0, 
-mental = 0.0, 
-negative = 0.0, 
-poison = 0.0, 
-shadow = 0.0, 
-sonic = 0.0, 
-water = 0.0, 
-bash = 0.0
-}
+mob = {}
+
+function ResetMob()
+    mob = {
+      uniqid = "", 
+      Name = "", 
+      Room = "", 
+      Zone = "", 
+      Level = 0, 
+      Guild = "", 
+      Subclass = "",
+      Identical = 0, 
+      Hp = 0, 
+      Alignment = "", 
+      Bash = 0.0, 
+      Pierce = 0.0, 
+      Slash = 0.0, 
+      Acid = 0.0, 
+      Air = 0.0, 
+      Cold = 0.0, 
+      Disease = 0.0, 
+      Earth = 0.0, 
+      Energy = 0.0, 
+      Fire = 0.0, 
+      Holy = 0.0, 
+      Light = 0.0, 
+      Electric = 0.0, 
+      Magic = 0.0, 
+      Mental = 0.0, 
+      Negative = 0.0, 
+      Poison = 0.0, 
+      Shadow = 0.0, 
+      Sonic = 0.0, 
+      Water = 0.0
+    }
+end
 
 function OnPluginInstall()
   GenTable()
+end
+
+function WipeDB()
+  DatabaseExec ("db", [[
+    DROP TABLE IF EXISTS mobs;
+      ]])
+  Note("Wiped Inquisitor DB")
 end
 
 function GenTable()
   DatabaseOpen("db", GetInfo(66) .. "inquisitor.sqlite", 6)
   Note("Opened DB")
   DatabaseExec ("db", [[
-    DROP TABLE IF EXISTS mobs;
-    CREATE TABLE mobs(
+    CREATE TABLE IF NOT EXISTS mobs(
         uniqid TEXT NOT NULL PRIMARY KEY,
         name      TEXT NOT NULL,
         room      TEXT NOT NULL,
@@ -81,6 +92,8 @@ function GenTable()
         level     INT NOT NULL
         guild      TEXT NOT NULL,
         subclass      TEXT NOT NULL,
+        identical INT,
+        hp INT,
         alignment   TEXT NOT NULL,
         bash    REAL,
         pierce    REAL,
@@ -104,40 +117,52 @@ function GenTable()
         water    REAL
       );
       ]])
-  DatabaseClose("db")
-  Note("Closed DB")
+  -- DatabaseClose("db")
+  -- Note("Closed DB")
 end
 
 function InterrogationSuccessful()
-  mob = {}
-  EnableTriggerGroup("capture_entry", true)
-  mob.Zone = "currentzone"
-  mob.Room = "currentroom"
   Note("Interrogation successful.")
+  ResetMob()
+  mob.Zone = "currentzone"
+  EnableTriggerGroup("capture_entry", true)
+  Note("Trigger group activated")
 end
 
 function Capture(flag, data)
+  Note("Data captured - " .. flag .. ": " .. data)
   mob[flag] = data
+end
+
+function CaptureRoom(name, line, wildcards, styles)
+  mob["Room"] = styles[2].text
 end
 
 function CaptureResist(name, data)
   sorted = {}
   --we're just capturing these separately to build an easily sorted list
   --ordering resists on capture reduces complexity of weakpoint analysis on run I think
-  Capture(flag, data)
-  Capture("ResistanceList", sorted)
+  Capture(name, data)
+  -- Capture("ResistanceList", sorted)
 end
 
 function ParseAlignment(flavortext)
   alignvalue = ""
+  alignvalue = flavortext
   -- map flavor text to alignment range
   Capture("Alignment", alignvalue)
 end
 
 function PostEntry()
+  mob.uniqid = mob.Zone .. mob.Room .. mob.Name
+  dump(mob)
+  DatabaseExec (db, string.format([[
+  "INSERT INTO mobs (uniqid, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
+  VALUES (%s, %s, %s, %s, %d, %s, %s, %d, %d, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)"
+  ]]), mob.uniqid, mob.Name, mob.Room, mob.Zone, mob.Level, mob.Guild, mob.Subclass, mob.Identical, mob.Hp, mob.Alignment, mob.Bash, mob.Pierce, mob.Slash, mob.Acid, mob.Air, mob.Cold, mob.Disease, mob.Earth, mob.Energy, mob.Fire, mob.Holy, mob.Light, mob.Electric, mob.Magic, mob.Mental, mob.Negative, mob.Poison, mob.Shadow, mob.Sonic, mob.Water)
   -- convert the table to a SQL entry and insert
   EnableTriggerGroup("capture_entry", false)
-  Note("Mob info captured.")
+  Note("Mob info captured to database.")
 end
 
 function CheckIfCatalogued(name)
@@ -152,8 +177,43 @@ function HeaderDisable()
   EnableTrigger("header", false)
 end
 
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
 ]]>
 </script>
+
+
+
+<aliases> -- interrrogate interrupt alias
+  <alias
+   match="k *"
+   enabled="y"
+   sequence="100"
+  >
+    <send>spellup silent
+    interrogate %1
+    kill %1</send>
+  </alias>
+  <alias
+   match="inquisitor-wipedb"
+   enabled="y"
+   send_to="12"
+   sequence="100"
+  >
+    <send>WipeDB()</send>
+  </alias>
+</aliases>
 
 <!--  Triggers  -->
 
@@ -161,11 +221,13 @@ end
   <trigger
    enabled="y"
    group="start_inquisitor"
-   match="As you mercilessly interrogate *, you learn ..."
+   match="^As you mercilessly interrogate"
+   regexp="y"
    omit_from_output="y"
-   sequence="100"
+   send_to="12"
+   sequence="99"
   >
-  <send>InterrogateSuccessful()</send>
+  <send>InterrogationSuccessful()</send>
   </trigger>
   <trigger
    enabled="n"
@@ -173,6 +235,7 @@ end
    name="header"
    match="----------------------------------------------------------------"
    omit_from_output="y"
+   send_to="12"
    sequence="100"
   >
   <send>HeaderDisable()</send>
@@ -180,8 +243,10 @@ end
   <trigger
    enabled="n"
    group="capture_entry"
-   match="Mob Short Name   : (*)"
+   match="Mob Short Name   : (([,'\-\w]\s?)+)$"
    omit_from_output="y"
+   regexp="y"
+   send_to="12"
    sequence="100"
   >
   <send>Capture("Name", "%1")</send>
@@ -189,8 +254,10 @@ end
   <trigger
    enabled="n"
    group="capture_entry"
-   match="Mob Base Level   : (*)"
+   match="Mob Base Level   : ([\d]+)$"
+   regexp="y"
    omit_from_output="y"
+   send_to="12"
    sequence="100"
   >
   <send>Capture("Level", "%1")</send>
@@ -198,8 +265,10 @@ end
   <trigger
    enabled="n"
    group="capture_entry"
-   match="Guild            : (*)"
+   match="Guild            : (([,'\-\w]\s?)+)$"
    omit_from_output="y"
+   regexp="y"
+   send_to="12"
    sequence="100"
   >
   <send>Capture("Guild", "%1")</send>
@@ -207,8 +276,10 @@ end
   <trigger
    enabled="n"
    group="capture_entry"
-   match="Subclass         : (*)"
+   match="Subclass         : (([,'\-\w]\s?)+)$"
    omit_from_output="y"
+   regexp="y"
+   send_to="12"
    sequence="100"
   >
   <send>Capture("Subclass", "%1")</send>
@@ -216,16 +287,50 @@ end
     <trigger
    enabled="n"
    group="capture_entry"
-   match="Alignment        : (*)"
+   match="Identical Mobs   : ([\d]+)$"
    omit_from_output="y"
+   regexp="y"
+   send_to="12"
    sequence="100"
   >
-  <send>ParseAlignment("1%")</send>
+  <send>Capture("Identical", "%1")</send>
+  </trigger>
+    <trigger
+   enabled="n"
+   group="capture_entry"
+   match="Times Killed     : ([\d]+)$"
+   omit_from_output="y"
+   regexp="y"
+   sequence="100"
+  >
+  </trigger>
+    <trigger
+   enabled="n"
+   group="capture_entry"
+   match="Mob Hp           : *([\d]+)\/([\d]+)"
+   omit_from_output="y"
+   regexp="y"
+   send_to="12"
+   sequence="100"
+  >
+  <send>Capture("Hp", "%2")</send>
+  </trigger>
+    <trigger
+   enabled="n"
+   group="capture_entry"
+   match="Alignment        : (([,'\-\.\w]\s?)+)$"
+   regexp="y"
+   omit_from_output="y"
+   send_to="12"
+   sequence="100"
+  >
+  <send>ParseAlignment("%1")</send>
   </trigger>
   <trigger
    enabled="n"
    group="capture_entry"
-   match="Note             : (*)"
+   match="Note             : (([,'\-\.\w]\s?)+)$"
+   regexp="y"
    omit_from_output="y"
    sequence="100"
   >
@@ -242,22 +347,28 @@ end
    enabled="n"
    group="capture_entry"
    match="([^\s]+)[\s:]+([0-9\-\.]+)%"
+   regexp="y"
    omit_from_output="y"
    keep_evaluating="y"
+   send_to="12"
    sequence="100"
-  > -- may need to check syntax on keep evaluating or if it's appropriate
+  >
   <send>CaptureResist("%1", "%2")</send>
-  </trigger>
+  </trigger> -- may need to check syntax on keep evaluating or if it's appropriate
   <trigger
    enabled="n"
    group="capture_entry"
    name="footer"
    match="----------------------------------------------------------------"
    omit_from_output="y"
+   send_to="12"
    sequence="101"
   >
   <send>PostEntry()</send>
   </trigger>
+  <trigger match="^\{rname\}(?P<room>.*)"
+    name="inquisitor_room" script="CaptureRoom" enabled="y"  keep_evaluating="y"  regexp="y"  omit_from_output="y"  send_to="12"  sequence="50"  >
+</trigger>
 </triggers>
 
 </muclient>
