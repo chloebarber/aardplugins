@@ -32,40 +32,41 @@
 <script>
 <![CDATA[
 
+db = "InquisitorDB"
 mob = {}
 
 function ResetMob()
     mob = {
-      uniqid = "", 
-      Name = "", 
-      Room = "", 
-      Zone = "", 
-      Level = 0, 
-      Guild = "", 
-      Subclass = "",
-      Identical = 0, 
-      Hp = 0, 
-      Alignment = "", 
-      Bash = 0.0, 
-      Pierce = 0.0, 
-      Slash = 0.0, 
-      Acid = 0.0, 
-      Air = 0.0, 
-      Cold = 0.0, 
-      Disease = 0.0, 
-      Earth = 0.0, 
-      Energy = 0.0, 
-      Fire = 0.0, 
-      Holy = 0.0, 
-      Light = 0.0, 
-      Electric = 0.0, 
-      Magic = 0.0, 
-      Mental = 0.0, 
-      Negative = 0.0, 
-      Poison = 0.0, 
-      Shadow = 0.0, 
-      Sonic = 0.0, 
-      Water = 0.0
+      uniqid = "defaultID", 
+      name = "poop", 
+      room = "poop", 
+      zone = "poop", 
+      level = 0, 
+      guild = "poop", 
+      subclass = "poop",
+      identical = 0, 
+      hp = 0, 
+      alignment = "poop", 
+      bash = 0.0, 
+      pierce = 0.0, 
+      slash = 0.0, 
+      acid = 0.0, 
+      air = 0.0, 
+      cold = 0.0, 
+      disease = 0.0, 
+      earth = 0.0, 
+      energy = 0.0, 
+      fire = 0.0, 
+      holy = 0.0, 
+      light = 0.0, 
+      electric = 0.0, 
+      magic = 0.0, 
+      mental = 0.0, 
+      negative = 0.0, 
+      poison = 0.0, 
+      shadow = 0.0, 
+      sonic = 0.0, 
+      water = 0.0
     }
 end
 
@@ -74,26 +75,61 @@ function OnPluginInstall()
 end
 
 function WipeDB()
-  DatabaseExec ("db", [[
+  DatabaseExec (db, [[
     DROP TABLE IF EXISTS mobs;
       ]])
   Note("Wiped Inquisitor DB")
 end
 
+function CloseDB()
+  DatabaseClose(db)
+  Note("Closed DB")
+end
+
+function TestInsert()
+  ResetMob()
+  --Note(dump(mob))
+
+  keys = {}
+  values = {}
+  for key, value in pairs(mob) do
+      table.insert(keys, key)
+      table.insert(values, value)
+  end
+  
+  Note(string.format([[
+  INSERT INTO mobs (
+  uniqid, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
+  VALUES 
+  (%s, %s, %s, %s, %d, %s, %s, %d, %d, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)
+  ]], 
+  mob.uniqid, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water))
+  
+  
+  DatabaseExec (db, string.format([[
+  INSERT INTO mobs (
+  uniqid, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
+  VALUES 
+  ('%s', '%s', '%s', '%s', %d, '%s', '%s', %d, %d, '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)
+  ]], 
+  mob.uniqid, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water))
+  Note("tested insert")
+end
+
 function GenTable()
-  DatabaseOpen("db", GetInfo(66) .. "inquisitor.sqlite", 6)
+  DatabaseOpen(db, GetInfo(66) .. "inquisitor.sqlite", 6)
   Note("Opened DB")
-  DatabaseExec ("db", [[
-    CREATE TABLE IF NOT EXISTS mobs(
+  DatabaseExec (db, [[
+    CREATE TABLE IF NOT EXISTS mobs (
         uniqid TEXT NOT NULL PRIMARY KEY,
         name      TEXT NOT NULL,
         room      TEXT NOT NULL,
         zone      TEXT NOT NULL,
-        level     INT NOT NULL
+        level     INT NOT NULL,
         guild      TEXT NOT NULL,
         subclass      TEXT NOT NULL,
-        identical INT,
-        hp INT,
+        identical   INT,
+        hp    INT,
         alignment   TEXT NOT NULL,
         bash    REAL,
         pierce    REAL,
@@ -117,7 +153,7 @@ function GenTable()
         water    REAL
       );
       ]])
-  -- DatabaseClose("db")
+  -- DatabaseClose(db)
   -- Note("Closed DB")
 end
 
@@ -142,7 +178,7 @@ function CaptureResist(name, data)
   sorted = {}
   --we're just capturing these separately to build an easily sorted list
   --ordering resists on capture reduces complexity of weakpoint analysis on run I think
-  Capture(name, data)
+  Capture(string.lower(name), data)
   -- Capture("ResistanceList", sorted)
 end
 
@@ -154,15 +190,24 @@ function ParseAlignment(flavortext)
 end
 
 function PostEntry()
-  mob.uniqid = mob.Zone .. mob.Room .. mob.Name
-  dump(mob)
+  mob.uniqid = mob.zone .. mob.room .. mob.name
+  --Note(dump(mob))
+  
   DatabaseExec (db, string.format([[
-  "INSERT INTO mobs (uniqid, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
-  VALUES (%s, %s, %s, %s, %d, %s, %s, %d, %d, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)"
-  ]]), mob.uniqid, mob.Name, mob.Room, mob.Zone, mob.Level, mob.Guild, mob.Subclass, mob.Identical, mob.Hp, mob.Alignment, mob.Bash, mob.Pierce, mob.Slash, mob.Acid, mob.Air, mob.Cold, mob.Disease, mob.Earth, mob.Energy, mob.Fire, mob.Holy, mob.Light, mob.Electric, mob.Magic, mob.Mental, mob.Negative, mob.Poison, mob.Shadow, mob.Sonic, mob.Water)
+    INSERT INTO mobs (
+    uniqid, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
+    VALUES 
+    ('%s', '%s', '%s', '%s', %d, '%s', '%s', %d, %d, '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)
+    ]], 
+    mob.uniqid, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water))
+  
   -- convert the table to a SQL entry and insert
+  if DatabaseError(db) == "not an error" then
+      Note("Mob info successfully captured to database.")
+  else
+      Note("Database error: " .. DatabaseError(db))
+  end
   EnableTriggerGroup("capture_entry", false)
-  Note("Mob info captured to database.")
 end
 
 function CheckIfCatalogued(name)
@@ -206,12 +251,28 @@ end
     kill %1</send>
   </alias>
   <alias
-   match="inquisitor-wipedb"
+   match="inq-wipedb"
    enabled="y"
    send_to="12"
    sequence="100"
   >
     <send>WipeDB()</send>
+  </alias>
+    <alias
+   match="inq-closedb"
+   enabled="y"
+   send_to="12"
+   sequence="100"
+  >
+    <send>CloseDB()</send>
+  </alias>
+    <alias
+   match="inq-testinsert"
+   enabled="y"
+   send_to="12"
+   sequence="100"
+  >
+    <send>TestInsert()</send>
   </alias>
 </aliases>
 
