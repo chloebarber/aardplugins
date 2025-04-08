@@ -1,6 +1,7 @@
 # aardplugins
 Plugins for Aardwolf
 
+WIP UNLESS MARKED OTHERWISE
 
 ---------StylishMode----------
 Inspired by FFXIII and named after the Arcsys fighting game control scheme.
