@@ -7,7 +7,7 @@ ALL PLUGINS WIP UNLESS MARKED OTHERWISE
 InquisitorDatabase
 -
 
-Creates a database of NPC weaknesses using data from the Interrogate skill
+Creates a SQLite3 database of NPC weaknesses using data from the Interrogate skill.
 
 Features complete:
 - Intercepts "kill" commands to attempt Interrogating the target before attacking if Interrogate is off cooldown.
