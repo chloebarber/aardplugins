@@ -32,12 +32,26 @@
 <script>
 <![CDATA[
 
+require 'gmcphelper'
+
 db = "InquisitorDB"
 mob = {}
+interrogate_ready = true
+debug = false
+
+function ToggleDebug()
+  if debug then
+    Note("Debug mode disabled")
+  else
+    Note("Debug mode enabled")
+  end
+  debug = not debug
+end
 
 function ResetMob()
     mob = {
       uniqid = "defaultID", 
+      partial = "false",
       name = "poop", 
       room = "poop", 
       zone = "poop", 
@@ -66,7 +80,7 @@ function ResetMob()
       poison = 0.0, 
       shadow = 0.0, 
       sonic = 0.0, 
-      water = 0.0
+      water = 0.0,
     }
 end
 
@@ -96,6 +110,9 @@ function TestInsert()
       table.insert(keys, key)
       table.insert(values, value)
   end
+
+  mob.zone = gmcp("room.info.zone")
+  mob.uniqid = mob.zone .. "+" .. mob.room .. "+" .. mob.name
   
   Note(string.format([[
   INSERT INTO mobs (
@@ -104,16 +121,6 @@ function TestInsert()
   (%s, %s, %s, %s, %d, %s, %s, %d, %d, %s, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)
   ]], 
   mob.uniqid, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water))
-  
-  
-  DatabaseExec (db, string.format([[
-  INSERT INTO mobs (
-  uniqid, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
-  VALUES 
-  ('%s', '%s', '%s', '%s', %d, '%s', '%s', %d, %d, '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)
-  ]], 
-  mob.uniqid, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water))
-  Note("tested insert")
 end
 
 function GenTable()
@@ -122,6 +129,7 @@ function GenTable()
   DatabaseExec (db, [[
     CREATE TABLE IF NOT EXISTS mobs (
         uniqid TEXT NOT NULL PRIMARY KEY,
+        partial TEXT NOT NULL,
         name      TEXT NOT NULL,
         room      TEXT NOT NULL,
         zone      TEXT NOT NULL,
@@ -157,21 +165,44 @@ function GenTable()
   -- Note("Closed DB")
 end
 
+function ResetInterrogate()
+  interrogate_ready = true
+  Note("Interrogate ready")
+end
+
+function InterrogateInjection(target)
+  --DatabasePrepare(db, "SELECT * FROM mobs WHERE") -- check for key
+  --DatabaseStep (db)
+  --DatabaseFinalize (db)
+
+  if interrogate_ready then
+    Send("spellup silent")
+    Send("interrogate " .. target)
+    Send("kill " .. target)
+  else
+    Send("spellup silent")
+    Send("kill " .. target)
+  end
+end
+
 function InterrogationSuccessful()
   Note("Interrogation successful.")
-  ResetMob()
-  mob.Zone = "currentzone"
+  interrogate_ready = false
+  mob.zone = "currentzone"
   EnableTriggerGroup("capture_entry", true)
-  Note("Trigger group activated")
+  if debug then Note("Trigger group activated") end
 end
 
 function Capture(flag, data)
-  Note("Data captured - " .. flag .. ": " .. data)
+  if debug then Note("Data captured - " .. flag .. ": " .. data) end
+  if type(data) == "string" then data = data:gsub("'", "''") end -- single quotes break sqlite
   mob[flag] = data
 end
 
 function CaptureRoom(name, line, wildcards, styles)
-  mob["Room"] = styles[2].text
+  styles[2].text = styles[2].text:gsub("'", "''") -- single quotes break sqlite
+  --Note("Room captured: " .. styles[2].text)
+  mob["room"] = styles[2].text
 end
 
 function CaptureResist(name, data)
@@ -184,30 +215,51 @@ end
 
 function ParseAlignment(flavortext)
   alignvalue = ""
-  alignvalue = flavortext
+  flavortext_short = string.sub(flavortext, string.len(mob.name)+4, string.len(flavortext)-1) -- removes mob name + "is" + ending period
   -- map flavor text to alignment range
-  Capture("Alignment", alignvalue)
+  Capture("alignment", flavortext_short)
+end
+
+
+immunities = {}
+function ProcessImmunities(raw)
+  for immunity in raw:gmatch("%w+") do 
+    table.insert(immunities, immunity) 
+  end
 end
 
 function PostEntry()
-  mob.uniqid = mob.zone .. mob.room .. mob.name
-  --Note(dump(mob))
-  
-  DatabaseExec (db, string.format([[
-    INSERT INTO mobs (
-    uniqid, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
-    VALUES 
-    ('%s', '%s', '%s', '%s', %d, '%s', '%s', %d, %d, '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)
-    ]], 
-    mob.uniqid, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water))
+
+  mob.zone = gmcp("room.info.zone")
+  mob.uniqid = mob.zone .. "+" .. mob.room .. "+" .. mob.name
+
+  for key, value in pairs(immunities) do -- JUST in case the mob somehow had a resistance AND an immunity to the same type, we overwrite with the immunity's 100%
+    if debug then Note("Immunity: " .. value) end
+    mob[value] = 100.0
+  end
+  immunities = {}
+
   
   -- convert the table to a SQL entry and insert
+  DatabaseExec (db, string.format([[
+    INSERT INTO mobs (
+    uniqid, partial, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water)
+    VALUES 
+    ('%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', %d, %d, '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d)
+    ]], 
+    mob.uniqid, mob.partial, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water))
+  
+  
   if DatabaseError(db) == "not an error" then
       Note("Mob info successfully captured to database.")
   else
-      Note("Database error: " .. DatabaseError(db))
+      Note("@RDatabase error: " .. DatabaseError(db))
+      Note("Mob data dump: " .. dump(mob))
+      Note("@GThis shouldn't happen: please contact Bartoc in-game on on the Aardwolf Discord server and send the above error message and data dump.)
   end
   EnableTriggerGroup("capture_entry", false)
+  ResetMob()
+
 end
 
 function CheckIfCatalogued(name)
@@ -244,11 +296,18 @@ end
   <alias
    match="k *"
    enabled="y"
+   send_to="12"
    sequence="100"
   >
-    <send>spellup silent
-    interrogate %1
-    kill %1</send>
+    <send>InterrogateInjection("%1")</send>
+  </alias>
+  <alias
+   match="inq-debug"
+   enabled="y"
+   send_to="12"
+   sequence="100"
+  >
+    <send>ToggleDebug()</send>
   </alias>
   <alias
    match="inq-wipedb"
@@ -281,6 +340,17 @@ end
 <triggers>
   <trigger
    enabled="y"
+   name="interrogatecooldown"
+   match="## You may now use Interrogation abilities."
+   regexp="y"
+   omit_from_output="y"
+   send_to="12"
+   sequence="101"
+  >
+  <send>ResetInterrogate()</send>
+  </trigger>
+  <trigger
+   enabled="y"
    group="start_inquisitor"
    match="^As you mercilessly interrogate"
    regexp="y"
@@ -310,7 +380,7 @@ end
    send_to="12"
    sequence="100"
   >
-  <send>Capture("Name", "%1")</send>
+  <send>Capture("name", "%1")</send>
   </trigger>
   <trigger
    enabled="n"
@@ -321,7 +391,7 @@ end
    send_to="12"
    sequence="100"
   >
-  <send>Capture("Level", "%1")</send>
+  <send>Capture("level", "%1")</send>
   </trigger>
   <trigger
    enabled="n"
@@ -332,7 +402,7 @@ end
    send_to="12"
    sequence="100"
   >
-  <send>Capture("Guild", "%1")</send>
+  <send>Capture("guild", "%1")</send>
   </trigger>
   <trigger
    enabled="n"
@@ -343,7 +413,7 @@ end
    send_to="12"
    sequence="100"
   >
-  <send>Capture("Subclass", "%1")</send>
+  <send>Capture("subclass", "%1")</send>
   </trigger>
     <trigger
    enabled="n"
@@ -354,7 +424,7 @@ end
    send_to="12"
    sequence="100"
   >
-  <send>Capture("Identical", "%1")</send>
+  <send>Capture("identical", "%1")</send>
   </trigger>
     <trigger
    enabled="n"
@@ -374,7 +444,7 @@ end
    send_to="12"
    sequence="100"
   >
-  <send>Capture("Hp", "%2")</send>
+  <send>Capture("hp", "%2")</send>
   </trigger>
     <trigger
    enabled="n"
@@ -386,6 +456,18 @@ end
    sequence="100"
   >
   <send>ParseAlignment("%1")</send>
+  </trigger>
+  <trigger
+   enabled="n"
+   group="capture_entry"
+   name="immunities"
+   match="^Immunities       : (.*)$"
+   regexp="y"
+   omit_from_output="y"
+   send_to="12"
+   sequence="100"
+  >
+  <send>ProcessImmunities("%1")</send>
   </trigger>
   <trigger
    enabled="n"
@@ -407,15 +489,26 @@ end
   <trigger
    enabled="n"
    group="capture_entry"
+   match="([^\s]+)[\s:]+([0-9\-\.]+)%      ([^\s]+)[\s:]+([0-9\-\.]+)%"
+   regexp="y"
+   omit_from_output="y"
+   send_to="12"
+   sequence="99"
+  >
+  <send>CaptureResist("%1", "%2")
+  CaptureResist("%3", "%4")</send> -- fucking disgusting but it's the easy way to capture 2 resists a line
+  </trigger>
+  <trigger
+   enabled="n"
+   group="capture_entry"
    match="([^\s]+)[\s:]+([0-9\-\.]+)%"
    regexp="y"
    omit_from_output="y"
-   keep_evaluating="y"
    send_to="12"
-   sequence="100"
+   sequence="101"
   >
-  <send>CaptureResist("%1", "%2")</send>
-  </trigger> -- may need to check syntax on keep evaluating or if it's appropriate
+  <send>CaptureResist("%1", "%2")</send> -- if this runs alone it short circuits multiple resists on the same line due to omit output
+  </trigger> 
   <trigger
    enabled="n"
    group="capture_entry"
