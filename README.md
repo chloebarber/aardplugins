@@ -20,6 +20,8 @@ Feature goals:
 - Mark roomchars with a flag if they haven't been captured yet.
 - Oracle's "look" command reveals a weakness (maybe up to four?). Capture Oracle info to database to improve crowdsourcing, but mark entries as "incomplete" to be overwritten by canonical Interrogates.
 
+Bonus stretch feature: create and maintain a separate database to catalogue all fountains within Aardwolf, solely for the purpose of fulfilling Bartoc's desire to make heinous cocktails in her Decanter.
+
 StylishMode
 -
 
