@@ -12,15 +12,20 @@ Creates a SQLite3 database of NPC weaknesses using data from the Interrogate ski
 Features complete:
 - Intercepts "kill" commands to attempt Interrogating the target before attacking if Interrogate is off cooldown.
 - When Interrogate is successful, generates a unique key of area + room + mob shortname and stores all information revealed by the Interrogate skill to a sqlite database.
+- Handles mob immunities by overriding relevant resists to 100
 
 Feature goals:
 - When attacking a mob, attempt to look it up in the database and plugin broadcast its stats if found.
+- Generate a sorted list of the mob's weaknesses to post in its database entry (more efficient to do it once on capture than on-demand later)
 - Attempt lookup of mobs before interrogation to skip captured mobs.
 - Sync local sqlite database with BigQuery to crowdsource data.
 - Mark roomchars with a flag if they haven't been captured yet.
 - Oracle's "look" command reveals a weakness (maybe up to four?). Capture Oracle info to database to improve crowdsourcing, but mark entries as "incomplete" to be overwritten by canonical Interrogates.
+- Bonus stretch feature: create and maintain a separate database to catalogue all fountains within Aardwolf, solely for the purpose of fulfilling Bartoc's desire to make heinous cocktails in her Decanter.
 
-Bonus stretch feature: create and maintain a separate database to catalogue all fountains within Aardwolf, solely for the purpose of fulfilling Bartoc's desire to make heinous cocktails in her Decanter.
+Database columns in order: 
+- uniqid, partial, name, room, zone, level, guild, subclass, identical, hp, alignment, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water
+
 
 StylishMode
 -
@@ -35,11 +40,16 @@ Features complete:
 
 Feature goals:
 - Smarter spellup function.
+- Re-equip weapons after disarmed.
+- Attempt to dispel debuffs afflicted on you.
 - After combat, recover by drinking potions.
+- Drink from your drink container when you get hungry/thirsty.
+- Portal alias to get portal from bag, equip, enter, equip previous held item, put portal back in bag.
+- Automatically add acquired keys to keyring.
 - Open and walk through doors after you bump into them - attempt to knock locked doors.
 - Integrate InquisitorDB data to smart target weaknesses and change behavior based on mob class.
 - Support custom rotations.
-- Tracks debuffs received or inflicted
+- Tracks debuffs received or inflicted.
 - Automatically disable all features when idle or fighting a player to fulfill anti-botting criteria. Remove program defaults and require user-defined rotations?
 
 
@@ -70,6 +80,7 @@ Aliases:
 - pib *  -  "put in bag"  -  puts item in Bag of Aardwolf
 - gfb *  -  "get from bag"  -  gets item from Bag of Aardwolf
 - lib *  -  "look in bag"  -  looks in Bag of Aardwolf
+- rest  -  "rest in the field"  -  if in the field, attempts to make a fire and camp before resting.
 
 
 Future Planned Plugins
