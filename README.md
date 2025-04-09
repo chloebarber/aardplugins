@@ -1,7 +1,7 @@
 # aardplugins
-Plugins for Aardwolf
+Bartoc the Inquisitive's plugins for MUSHclient Aardwolf
 
-WIP UNLESS MARKED OTHERWISE
+ALL PLUGINS WIP UNLESS MARKED OTHERWISE
 
 
 InquisitorDatabase
@@ -37,6 +37,7 @@ Feature goals:
 - Open and walk through doors after you bump into them - attempt to knock locked doors.
 - Integrate InquisitorDB data to smart target weaknesses and change behavior based on mob class.
 - Support custom rotations.
+- Tracks debuffs received or inflicted
 - Automatically disable all features when idle or fighting a player to fulfill anti-botting criteria.
 
 
@@ -57,3 +58,22 @@ Feature goals:
 - Potentially integrate Crowley's cutils Table function for cleaner output.
 - Support config for displaying & sorting by average level instead of level range.
 - Support config for sorting by mob density.
+
+Bartoc's Utilities
+-
+
+Miscellaneous aliases and helper functions Bartoc uses. Staging ground for testing code before it's spun off into an independent plugin.
+
+Aliases:
+- pib *  -  "put in bag"  -  puts item in Bag of Aardwolf
+- gfb *  -  "get from bag"  -  gets item from Bag of Aardwolf
+- lib *  -  "look in bag"  -  looks in Bag of Aardwolf
+
+
+Future Planned Plugins
+-
+
+Master Interface - turn miniwindows into tabs. Combines minimap, exits, room description, graffiti, room npcs, objects into a single elegant window.
+Market Board plugin - sort by category, easy bid
+Inventory - graphical sorted inventory with tabs
+GraphicBattle - elegant battle readout compressing the battle log to a simplified graphical interface. Adds damagetype sprites and visual debuff tracking
