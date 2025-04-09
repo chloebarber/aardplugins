@@ -24,12 +24,51 @@
 <!--  Triggers  -->
 
 <triggers>
+   <trigger
+   enabled="n"
+   group="skills_capture"
+   match="Skill\/Spell name            Level  Sn   %"
+   omit_from_output="y"
+   regexp="y"
+   sequence="100"
+  >
+  </trigger>
   <trigger
-   match="gold coins from the * corpse"
+   enabled="n"
+   group="skills_capture"
+   match="--------------------------  -----  --- ---"
+   omit_from_output="y"
+   regexp="y"
+   sequence="100"
+  >
+  </trigger>
+  <trigger
+   enabled="n"
+   group="skills_capture"
+   match="^\s(([,'\-\w]\s?)+)(?<!\s)"
+   omit_from_output="y"
+   regexp="y"
+   send_to="12"
+   sequence="100"
+  >
+  <send>CaptureSkill("%1")</send>
+  </trigger>
+  <trigger
+   enabled="n"
+   group="skills_capture"
+   match="\* means that you cannot use the skill\/spell\."
+   omit_from_output="y"
+   regexp="y"
+   send_to="12"
+   sequence="100"
+  >
+  <send>CaptureComplete()</send>
+  </trigger>
+  <trigger
+   match="gold coins from the [\w\s]* corpse"
    script="ClearOnDeath"
    enabled="y"
    regexp="y"
-   send_to="12"
    sequence="20"
   >
   </trigger>
@@ -40,32 +79,23 @@
 <!--  Timers  -->
 
 <timers>
-  <timer name="qwin_timer" second="1.00" offset_second="0.50"    send_to="12"
-group="qwin_timers" >
-  <send>update_questtimer()</send>
 
-  </timer>
-  <timer name="quest_cooldown_timer" second="1.00" offset_second="0.00"    send_to="12"
-group="qwin_timers" >
-  <send>update_questcooldown()</send>
-
-  </timer>
   <timer name="gcd" second="2.50" offset_second="0.00"    send_to="12"
 group="stylish_mode" >
-  <send>TerminateThatShit()</send>
-
+  <send>RunStylishMode()</send>
   </timer>
+
     <timer name="ogcd" second="23" offset_second="0.00"    send_to="12"
 group="stylish_mode" >
   <send>OGCD()</send>
-
   </timer>
+
 </timers>
 
 <!--  Variables  -->
 
 <variables>
-  <variable name="drink_container">Sacramental Carafe</variable>
+  <variable name="drink_container"></variable>
 </variables>
 
 
@@ -85,23 +115,88 @@ require "copytable"
 
 page_built = false
 gmcp_char = {}
+skill_list = {}
 cached_delay = 0 -- save old speedwalk delay if slowing it down
 
+drink_container = "Decanter of Endless Water"
 
-function TerminateThatShit() 
+current_level = 0
+function OnPluginInstall()
+    Send_GMCP_Packet("request status")
+end
+
+function PopulateSkills() -- capture all learned skills up to your current level
+   skill_list = {}
+   EnableTriggerGroup("skills_capture", true)
+   SendNoEcho("allspells 1 ".. current_level .. " learned")
+end
+
+function CaptureSkill(skill)
+   skill = string.lower(skill)
+   skill_list[skill] = true
+end
+
+function CaptureComplete()
+   EnableTriggerGroup("skills_capture", false)
+end
+
+function UseSkill(skill) -- if you have the requested skill: use it and return true; otherwise false
+   if skill_list[skill] then
+      Send("cast " .. "\"" .. skill .. "\"")
+      return true
+   else
+      return false
+   end
+end
+
+
+
+function RunStylishMode() 
   FBfighting = gmcp_char.status.enemy
   if FBfighting ~= "" then
    -- AutoPotion()
    ResetTimer("gcd")
+
+
+
     enemypct = ReturnPercent("enemyhp")
-    if enemypct <= 15 and enemypct > 0 then
-      Send("cast Terminate")
+    if enemypct <= 15 and enemypct > 0 and UseSkill("terminate") then
     elseif enemypct >= 30 then
-      Send("cast Scourge")
+       if Debuffs() then 
+       elseif UseSkill("scourge") then end
     end
    else
       EnableTimer("gcd", false)
    end
+end
+
+soften = false
+ego_whip = false
+psychic_drain = false
+raw_flesh = false
+tortured_vision = false
+function Debuffs()
+   if not ego_whip and UseSkill("ego whip") then
+      ego_whip = true
+      return true
+   elseif not soften and UseSkill("soften") then
+      soften = true
+      return true
+   elseif not soften and UseSkill("raw flesh") then
+      raw_flesh = true
+      return true
+   elseif not psychic_drain and UseSkill("psychic drain") then
+      psychic_drain = true
+      return true
+   else
+      return false
+   end
+end
+
+function ResetDebuffs()
+   soften = false
+   ego_whip = false
+   psychic_drain = false
 end
 
 function AutoPotion() -- add a potion check before enabling
@@ -115,7 +210,7 @@ end
 
 function AutoDrink()
    if tonumber(gmcp_char.status.hunger) < 50 or tonumber(gmcp_char.status.thirst) < 50 then
-      Send("gulp " .. GetVariable("drink_container"))
+      Send("gulp " .. drink_container)
    end
 end
 
@@ -144,9 +239,7 @@ function OGCD()
 end
 
 function ClearOnDeath()
-   DiscardQueue()
-   SetSpeedWalkDelay(0)
-   Queue("snap")
+   ResetDebuffs()
 end
 
 function OnPluginBroadcast (msg, id, name, text)
@@ -170,16 +263,31 @@ function OnPluginBroadcast (msg, id, name, text)
             gmcp_char.maxstats = gmcp("char.maxstats")
          end
          if gmcp_char.status then
+            if tonumber(gmcp_char.status.level) > tonumber(current_level) then
+                  current_level = gmcp_char.status.level
+                  PopulateSkills()
+            end
             page_built = true
-            AutoDrink()
-            EnableTimer("ogcd", true)
+            --AutoDrink()
+            --EnableTimer("ogcd", true)
             EnableTimer("gcd", true)
          end
       end
    end
 end
+
+function SuperiorSpellup() -- spellup which intelligently uses int/wis buffs first
+end
+
+castTable = {
+   scourge = "Your scourge",
+   flay = {"Your whipping", "## You may now use Whipmaster abilities."},
+   terminate = "Your deadly force"
+}
+
+failcast = "lost your concentration"
+
 ]]>
 </script>
-
 
 </muclient>
