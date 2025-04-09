@@ -88,7 +88,7 @@ Future Planned Plugins
 
 SpellupBar - compresses lengthly, verbose spellup dialogue to a loading bar.
 
-Master Interface - turn miniwindows into tabs. Combines minimap, exits, room description, graffiti, room npcs, objects into a single elegant window. Adds maps.gaardian hyperlinks for current area.
+Master Interface - turn miniwindows into tabs. Combines minimap, exits, room description, graffiti, room npcs, objects into a single elegant window. Integrates with InquisitorDB to automatically show real level and alignment on room npcs. Adds maps.gaardian hyperlinks for current area.
 
 Market Board plugin - filter by category to tabs, click to appraise. Easy bid. Price tracking of average sale prices?
 
