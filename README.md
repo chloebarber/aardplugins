@@ -40,7 +40,7 @@ Feature goals:
 - Integrate InquisitorDB data to smart target weaknesses and change behavior based on mob class.
 - Support custom rotations.
 - Tracks debuffs received or inflicted
-- Automatically disable all features when idle or fighting a player to fulfill anti-botting criteria.
+- Automatically disable all features when idle or fighting a player to fulfill anti-botting criteria. Remove program defaults and require user-defined rotations?
 
 
 Where2Grind
