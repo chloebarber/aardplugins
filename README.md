@@ -73,7 +73,8 @@ Aliases:
 Future Planned Plugins
 -
 
+SpellupBar - compresses lengthly, verbose spellup dialogue to a loading bar.
 Master Interface - turn miniwindows into tabs. Combines minimap, exits, room description, graffiti, room npcs, objects into a single elegant window.
-Market Board plugin - sort by category, easy bid
-Inventory - graphical sorted inventory with tabs
-GraphicBattle - elegant battle readout compressing the battle log to a simplified graphical interface. Adds damagetype sprites and visual debuff tracking
+Market Board plugin - filter by category to tabs, click to appraise. Easy bid. Price tracking of average sale prices?
+Inventory - graphical sorted inventory with tabs.
+GraphicBattle - elegant battle readout compressing the battle log to a simplified graphical interface. Adds damagetype sprites and visual debuff tracking.
