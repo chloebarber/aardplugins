@@ -37,6 +37,7 @@ Features complete:
 - Drawing from the practiced spells available to you at your level, use a skill or cast a spell every combat turn based on a defined rotation.
 - Use different sets of abilities based on mob hp %.
 - Debuff enemies without duplicating afflictions.
+- Open and walk through doors after you bump into them - attempt to knock locked doors.
 
 Feature goals:
 - Smarter spellup function.
@@ -46,7 +47,6 @@ Feature goals:
 - Drink from your drink container when you get hungry/thirsty.
 - Portal alias to get portal from bag, equip, enter, equip previous held item, put portal back in bag.
 - Automatically add acquired keys to keyring.
-- Open and walk through doors after you bump into them - attempt to knock locked doors.
 - Integrate InquisitorDB data to smart target weaknesses and change behavior based on mob class.
 - Support custom rotations.
 - Tracks debuffs received or inflicted.
