@@ -38,6 +38,7 @@ db = "InquisitorDB"
 mob = {}
 interrogate_ready = true
 debug = false
+inquisitor = ""
 
 function ToggleDebug()
   if debug then
@@ -49,25 +50,22 @@ function ToggleDebug()
 end
 
 function IfCatalogued(uniqid)
-  Note("SELECT EXISTS(SELECT 1 FROM mobs WHERE uniqid=\"" .. uniqid .. "\")")
-  DatabasePrepare(db, "SELECT EXISTS(SELECT 1 FROM mobs WHERE uniqid=\"" .. uniqid .. "\")")
-  Note(DatabaseStep(db))
-  Note("SQL code: " .. DatabaseFinalize(db)) -- returns 0 (sqlite3.OK)
+  if debug then Note("Checking if " .. uniqid .. " catalogued") end
+  Note("SQL code: " .. inquisitor:exec("SELECT EXISTS(SELECT 1 FROM mobs WHERE uniqid=\"" .. uniqid .. "\")")) -- returns 0 (sqlite3.OK)
 end
 
-function ReturnCatalogued(uniqid)
-  returned = {}
-  db:exec("SELECT * FROM mobs WHERE uniqid=\"" .. uniqid .. "\"")
-  for row in db:nrows("SELECT * FROM mobs WHERE uniqid=\"" .. uniqid .. "\"") do returned[row] = column end
-  Note(dump(returned))
-end
+function CheckIfCataloguedAndReturn(uniqid)
+  if debug then Note("Attempting to retrieve entry for: " .. uniqid) end
+  
+  results = {}
+  captured = false
+  for row in inquisitor:nrows("SELECT * FROM mobs WHERE uniqid=\"" .. uniqid .. "\"") do table.insert(results, row) end
+  if results[1] then captured = true end
 
-function ReturnCataloguedOLD(uniqid)
-  Note("SELECT * FROM mobs WHERE uniqid=\"" .. uniqid .. "\"")
-  DatabasePrepare(db, "SELECT * FROM mobs WHERE uniqid=\"" .. uniqid .. "\"")
-  DatabaseStep(db)
-  Note(dump(DatabaseColumnValues(db)))
-  Note("SQL code: " .. DatabaseFinalize(db)) -- returns 0 (sqlite3.OK)
+  if debug then Note(captured) end
+  if debug then Note(dump(results[1])) end
+  
+  return captured, results
 end
 
 
@@ -111,26 +109,27 @@ end
 
 function OnPluginInstall()
   Note("InquisitorDB installed.")
-  GenTable()
+  GenTable() -- might throw an error rn
   ResetMob()
 end
 
 function WipeDB()
-  DatabaseExec (db, [[
+  inquisitor:exec([[
     DROP TABLE IF EXISTS mobs;
       ]])
   Note("Wiped Inquisitor DB")
 end
 
 function CloseDB()
-  DatabaseClose(db)
+  inquisitor:close()
   Note("Closed DB")
 end
 
 function GenTable()
-  DatabaseOpen(db, GetInfo(66) .. "inquisitor.sqlite", 6)
+
+  inquisitor=sqlite3.open("inquisitor.sqlite")
   if debug then Note("Opened DB") end
-  DatabaseExec (db, [[
+  inquisitor:exec([[
     CREATE TABLE IF NOT EXISTS mobs (
         uniqid TEXT NOT NULL PRIMARY KEY,
         partial TEXT NOT NULL,
@@ -167,9 +166,8 @@ function GenTable()
         contributor TEXT
       );
       ]])
-  -- DatabaseClose(db)
-  -- Note("Closed DB")
 end
+
 
 function ResetInterrogate()
   interrogate_ready = true
@@ -237,11 +235,12 @@ function PostEntry()
 
   -- First, stop capturing and stamp it with the zone, room, and name of the contributor
   EnableTriggerGroup("capture_entry", false)
-  mob.contributor = gmcp("char.base.name")
+
   mob.zone = gmcp("room.info.zone")
   mob.room = gmcp("room.info.name")
   mob.room = mob.room:gsub("'", "''") -- single quotes break sqlite i.e. "Bartoc's Throne"
   mob.uniqid = mob.zone .. "+" .. mob.room .. "+" .. mob.name
+  mob.contributor = gmcp("char.base.name")
 
   -- Second, JUST in case the mob somehow had a resistance AND an immunity to the same type, we overwrite with the immunity's 100%
   for key, value in pairs(immunities) do 
@@ -256,39 +255,33 @@ function PostEntry()
   -- keep this for later: SELECT EXISTS(SELECT 1 FROM mobs WHERE iniqud="tag")
   
   if debug then Note(dump(mob)) end
-  DatabasePrepare (db, "SELECT EXISTS(SELECT 1 FROM mobs WHERE uniqud=" .. mob.uniqid .. ")")
-  DatabaseStep (db) 
-  if (DatabaseFinalize(db) == 0) then 
-    Note("Duplicate key detected: aborting")
-    return 
-  end -- returns 0 (sqlite3.OK)
-  DatabaseExec (db, string.format([[
-    INSERT INTO mobs (
-    uniqid, partial, name, room, zone, level, guild, subclass, identical, hp, alignment, sortedresists, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water, contributor)
-    VALUES 
-    ('%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', %d, %d, '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, '%s')
-    ]], 
-    mob.uniqid, mob.partial, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.sortedresists, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water, mob.contributor))
+  captured, existingentry = CheckIfCataloguedAndReturn(mob.uniqid)
+  if not captured then
+    inquisitor:exec(string.format([[
+      INSERT INTO mobs (
+      uniqid, partial, name, room, zone, level, guild, subclass, identical, hp, alignment, sortedresists, bash, pierce, slash, acid, air, cold, disease, earth, energy, fire, holy, light, electric, magic, mental, negative, poison, shadow, sonic, water, contributor)
+      VALUES 
+      ('%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', %d, %d, '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, '%s')
+      ]], 
+      mob.uniqid, mob.partial, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.sortedresists, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water, mob.contributor))
+    
+    if inquisitor:errmsg() == "not an error" then
+        Note("Mob info for " .. mob.name .. " successfully captured to database.")
+    else
+        Note("Database error: " .. inquisitor:errmsg())
+        Note("Mob data dump: " .. dump(mob))
+        Note("This shouldn't happen: please contact Bartoc in-game or on the Aardwolf Discord server and send the above error message and data dump.")
+    
+    end
+  else
+    Note("Mob already captured to database.")
+  end
   
   -- Fourth, handle database errors. We're silencing duplicate entry errors for now
-  if DatabaseError(db) == "not an error" or not (DatabaseError(db) == "UNIQUE constraint failed: mobs.uniqid") then
-      Note("Mob info for " .. mob.name .. " successfully captured to database.")
-  else
-      Note("Database error: " .. DatabaseError(db))
-      Note("Mob data dump: " .. dump(mob))
-      Note("This shouldn't happen: please contact Bartoc in-game or on the Aardwolf Discord server and send the above error message and data dump.")
-  end
-  
+
 
 end
 
-function CheckIfCatalogued(name)
-  --check if name + room + zone exists
-  catalogued = "false" -- make this the lookup instead
-  if catalogued == false then
-    iq = 0 --enable alias to interrogate
-  end
-end
 
 function HeaderDisable()
   EnableTrigger("header", false)
