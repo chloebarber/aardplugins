@@ -20,6 +20,18 @@
 
 </plugin>
 
+<aliases>
+   <alias
+      match="^(north|south|east|west|up|down)$"
+      enabled="y"
+      regexp="y"
+      send_to="12"
+      sequence="20"
+   >
+      <send>LastDir("%1")</send>
+   </alias>
+</aliases>
+
 
 <!--  Triggers  -->
 
@@ -72,6 +84,32 @@
    sequence="20"
   >
   </trigger>
+  <trigger
+   match="^The (door|trapdoor|gate) is closed."
+   enabled="y"
+   regexp="y"
+   send_to="12"
+   sequence="20"
+  >
+  <send>DoorBuddy()</send>
+  </trigger>
+  <trigger
+   match="^You do not have a key for the (door|trapdoor|gate)."
+   script="DoorBuddyKnock"
+   enabled="y"
+   regexp="y"
+   sequence="20"
+  >
+  </trigger>
+  <trigger
+   match="^You (open|unlock) the (door|trapdoor|gate)."
+   enabled="y"
+   regexp="y"
+   send_to="12"
+   sequence="20"
+  >
+  <send>WalkThroughDoor()</send>
+  </trigger>
 </triggers>
 
 <!--  Aliases  -->
@@ -122,7 +160,8 @@ drink_container = "Decanter of Endless Water"
 
 current_level = 0
 function OnPluginInstall()
-    Send_GMCP_Packet("request status")
+   Note("Stylish Mode installed.")
+   Send_GMCP_Packet("request status")
 end
 
 function PopulateSkills() -- capture all learned skills up to your current level
@@ -163,7 +202,7 @@ function RunStylishMode()
     if enemypct <= 15 and enemypct > 0 and UseSkill("terminate") then
     elseif enemypct >= 30 then
        if Debuffs() then 
-       elseif UseSkill("scourge") then end
+       elseif UseSkill("pillar of fire") then end
     end
    else
       EnableTimer("gcd", false)
@@ -172,7 +211,7 @@ end
 
 soften = false
 ego_whip = false
-psychic_drain = false
+psychic_drain = true
 raw_flesh = false
 tortured_vision = false
 function Debuffs()
@@ -182,7 +221,7 @@ function Debuffs()
    elseif not soften and UseSkill("soften") then
       soften = true
       return true
-   elseif not soften and UseSkill("raw flesh") then
+   elseif not raw_flesh and UseSkill("raw flesh") then
       raw_flesh = true
       return true
    elseif not psychic_drain and UseSkill("psychic drain") then
@@ -263,8 +302,8 @@ function OnPluginBroadcast (msg, id, name, text)
             gmcp_char.maxstats = gmcp("char.maxstats")
          end
          if gmcp_char.status then
-            if tonumber(gmcp_char.status.level) > tonumber(current_level) then
-                  current_level = gmcp_char.status.level
+            if tonumber(gmcp("char.status.level")) > tonumber(current_level) then
+                  current_level = gmcp("char.status.level")
                   PopulateSkills()
             end
             page_built = true
@@ -274,6 +313,24 @@ function OnPluginBroadcast (msg, id, name, text)
          end
       end
    end
+end
+
+last_direction = "north"
+function DoorBuddy()
+   Send("open " .. last_direction)
+end
+
+function DoorBuddyKnock()
+   Send("cast knock " .. last_direction)
+end
+
+function LastDir(direction)
+   last_direction = direction
+   Send(direction)
+end
+
+function WalkThroughDoor()
+   Send(last_direction)
 end
 
 function SuperiorSpellup() -- spellup which intelligently uses int/wis buffs first
