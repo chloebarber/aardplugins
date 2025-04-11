@@ -40,6 +40,14 @@
   <send>invsort type "bag aardwolf"</send>
   </alias>
   <alias
+   match="^drink$"
+   enabled="y"
+   regexp="y"
+   sequence="100"
+  >
+  <send>gulp decanter aardwolf</send>
+  </alias>
+  <alias
    match="pib *"
    enabled="y"
    sequence="100"
@@ -49,24 +57,18 @@
   <alias
    match="request"
    enabled="y"
+   send_to="12"
    sequence="100"
   >
-  <send>recall
-runto quest
-quest request
-runto recall</send>
+  <send>QuestFunction("request")</send>
   </alias>
   <alias
    match="restock"
    enabled="y"
+   send_to="12"
    sequence="100"
   >
-  <send>recall
-runto manorv
-run 2nu
-buy Potion 20
-buy Ether 20
-recall</send>
+  <send>Restock()</send>
   </alias>
   <alias
    match="speeddelay"
@@ -86,12 +88,19 @@ k %1</send>
   <alias
    match="cquest"
    enabled="y"
+   send_to="12"
    sequence="100"
   >
-  <send>recall
-runto quest
-quest complete
-runto recall</send>
+  <send>QuestFunction("complete")</send>
+  </alias>
+    <alias
+   match="dump gmcp ([\w]+)"
+   enabled="y"
+   regexp="y"
+   send_to="12"
+   sequence="100"
+  >
+  <send>DumpGMCP("%1")</send>
   </alias>
   <alias
    match="deletelines"
@@ -104,12 +113,10 @@ runto recall</send>
   <alias
    match="fquest"
    enabled="y"
+   send_to="12"
    sequence="100"
   >
-  <send>recall
-runto quest
-quest fail
-runto recall</send>
+  <send>QuestFunction("fail")</send>
   </alias>
   <alias
    match="gfb *"
@@ -127,19 +134,12 @@ runto recall</send>
 wear all</send>
   </alias>
   <alias
-   match="buffs *"
+   match="stealth"
    enabled="y"
    sequence="100"
   >
-  <send>cast "test of faith" %1
-cast "call upon faith"
-cast "divine faith" %1
-cast "spirit shield" %1
-cast "sanctuary" %1
-cast "bless" %1
-cast "aid" %1
-cast "detect good" %1
-cast "detect evil" %1</send>
+  <send>shadow
+chameleon</send>
   </alias>
 </aliases>
 
@@ -151,9 +151,12 @@ cast "detect evil" %1</send>
 
 <script>
 <![CDATA[
+
+
 function DebugDeleteLines(number)
 	DeleteLines(number)
 end
+
 
 require "mw_theme_base"
 require "serialize"
@@ -163,6 +166,8 @@ require "copytable"
 require "table"
 require "themed_miniwindows"
 require "tprint"
+require "wait"
+require 'gmcphelper'
 
 spellup_length = 0
 successes = 0
@@ -170,11 +175,37 @@ failures = 0
 beginbar = true
 bar = ""
 
+function OnPluginInstall()
+  Note("Bartoc's Utilities refreshed.")
+end
+
+function QuestFunction(var)
+  SmartRecall()
+  Send("runto quest")
+  Send("quest " .. var)
+  Send("runto recall")
+end
+
+function Restock()
+  SmartRecall()
+  Send("runto manorv")
+  Send("run 2nu")
+  Send("buy 40 Potion")
+  -- Send("buy 20 Ether")
+  Send("recall")
+end
+
+
+
+function SmartRecall()
+  if not (gmcp("room.info.zone") == "aylor") then Send("recall") end
+end
+
 SpellupWindow = ThemedTextWindow(
    GetPluginID(),  -- string, required, a unique identifier for this window
    0,  -- integer, required, where to put it if the player hasn't moved it
    0,  -- integer, required, where to put it if the player hasn't moved it
-   200,  -- integer, required, how big to make it if the player hasn't moved it
+   400,  -- integer, required, how big to make it if the player hasn't moved it
    50,  -- integer, required, how big to make it if the player hasn't moved it
    "Spellup",  -- string, optional (nil means no titlebar), text to put into the title
    "center",  -- string, optional (default is "center"), "left", "center", or "right"
@@ -188,10 +219,10 @@ SpellupWindow = ThemedTextWindow(
    nil,  -- string, optional (default is Dina), override the title font name
    nil,  -- integer, optional (default is 10), override the title font size
    nil,  -- string, optional (default is Dina), override the body text font name
-   20,  -- integer, optional (default is 10), override the body text font size
+   10,  -- integer, optional (default is 10), override the body text font size
    nil,  -- integer, optional (default is 1000), maximum number of text lines to keep
    nil,  -- integer, optional (default is 5 pixels), space between text and miniwindow frame
-   nil,  -- boolean, optional (default is false), true will prevent the window from appearing until you call :show() on it
+   true,  -- boolean, optional (default is false), true will prevent the window from appearing until you call :show() on it
    false  -- boolean, optional (default is false), if true, pixels the same color as Theme.PRIMARY_BODY will be transparent
 )
 
@@ -208,7 +239,7 @@ function BeginSpellup()
   Send("spellup")
   SpellupWindow:clear()
   EnableTriggerGroup("cleanspellup", true)
-  WindowShow("SpellupWindow", true)
+  SpellupWindow:show()
 end
 
 
@@ -217,37 +248,72 @@ function CountSpells()
   barframe = barframe .. "_"
 end
 
+
 function UpdateSpellupBar(result)
 
 
   if result == "success" then
     successes = successes + 1
-    loadbar = loadbar .. "#"
-    SpellupWindow:clear()
-    SpellupWindow:add_text(loadbar)
-    --Tell(loadbar)
-    --ColourTell("blue", "black", "#")
+    loadbar = loadbar .. "@C#"
   else
     failures = failures + 1
-    loadbar = loadbar .. "#"
-    SpellupWindow:clear()
-    SpellupWindow:add_text(loadbar)
-    --Tell(loadbar)
-    --ColourTell("red", "black", "#")
+    loadbar = loadbar .. "@r#"
   end
-
+  Note("successes: " .. successes .. "  Failures: " .. failures .. "  Spell Count: " .. spellup_length)
+  if (successes + failures) == spellup_length then
+    if successes == spellup_length then
+      SpellupWindow:clear()
+      SpellupWindow:add_text("[" .. loadbar .. "]  @GOK")
+      SpellupWindow:draw()
+    else
+      SpellupWindow:clear()
+      SpellupWindow:add_text("[" .. loadbar .. "]  @RFailures: " .. failures)
+      SpellupWindow:draw()
+    end
+    --wait.time(2)
+    SpellupWindow:hide()
+    EnableTriggerGroup("cleanspellup", false)
+  else
+    SpellupWindow:clear()
+    --SpellupWindow:add_text(barframe)
+    SpellupWindow:add_text("[" .. loadbar)
+    --SpellupWindow:add_text(barframe)
+    SpellupWindow:draw()
+  end
 end
+
+
+function DumpGMCP(var)
+  table = gmcp(var)
+  Note(dump(table))
+end
+
 
 function ClearNewline (name, line, wildcards)
   DeleteLines (1)
-  SpellupWindow:clear()
-  SpellupWindow:add_text(loadbar)
+  --SpellupWindow:clear()
+  --SpellupWindow:add_text(loadbar)
   --Tell(loadbar)
-  if (successes + failures) >= spellup_length then
-    WindowShow("SpellupWindow", false)
-    EnableTriggerGroup("cleanspellup", false)
-  end
+  --if (successes + failures) >= spellup_length then
+  --  WindowShow("SpellupWindow", false)
+  --  EnableTriggerGroup("cleanspellup", false)
+  --end
 end
+
+
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
 
 ]]>
 </script>
@@ -301,6 +367,15 @@ end
     script="ClearNewline"
     >
     </trigger>
+    <trigger
+    enabled="y"
+    match="is auctioning Tendrils of the Void"
+    omit_from_output="y"
+    regexp="y"
+    sequence="101"
+    >
+    </trigger>
+
 </triggers>
 
 </muclient>
