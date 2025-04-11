@@ -85,10 +85,11 @@ alignment_mode = "good"
 range_min_below = 2
 range_max_above = 10
 death_table = {}
+death_table_size = 0
 
 function OnPluginInstall()
-    --UpdateWhere2Grind() -- tester
-    Send_GMCP_Packet("request status") -- real
+    Note("Where2Grind installed.")
+    --Send_GMCP_Packet("request status")
 end
 
 -- morn and yajan said use triggers instead so
@@ -102,7 +103,11 @@ function UpdateWhere2Grind()
         range_min_one = 1
     end
     SendNoEcho("mobdeaths" .. " " .. range_min_one .. " " .. rangemax .. " " .. alignment_mode)
-    Note("Mobdeaths sent - " .. "mobdeaths" .. " " .. range_min_one .. " " .. rangemax .. " " .. alignment_mode)
+    --Note("Mobdeaths sent - " .. "mobdeaths" .. " " .. range_min_one .. " " .. rangemax .. " " .. alignment_mode)
+    EnableTrigger("w2g_trigger_start", true)
+end
+
+function BeginCapture()
     EnableTriggerGroup("table_capture", true)
 end
 
@@ -119,6 +124,7 @@ function CaptureMobdeath(level, area)
     else
         death_table[area] = {level, level, 1}
     end
+    death_table_size = death_table_size + 1
 end
 
 function compare(a,b)
@@ -145,9 +151,43 @@ function FormatLines(key, val)
     return key, val
 end
 
+
+
+function SortTable(unsorted)
+
+    pos = 0
+    lowestpos = 0
+    lowest_val = 999
+    lowest_entry = {}
+    sorted = {}
+
+    while death_table_size > 0 do
+        for key, val in pairs(unsorted) do
+            pos = pos + 1
+            if tonumber(val[1]) < lowest_val then
+                lowest_pos = pos
+                lowest_val = val[1]
+                lowest_entry = key
+            end
+        end
+        table.remove(unsorted, lowest_pos)
+        table.insert(sorted, lowest_entry)
+        lowest_val = 999
+        lowest_entry = {}
+        pos = 0
+        death_table_size = death_table_size - 1
+    end
+
+    return sorted
+end
+
 function ProcessData()
     EnableTriggerGroup("table_capture", false)
-    table.sort(death_table, compare)
+    
+
+
+    --death_table = SortTable(death_table)
+    --Note(death_table)
     
     W2GWindow:clear()
     W2GWindow:add_text("  Range            Zone           Density ")
@@ -157,7 +197,7 @@ function ProcessData()
         W2GWindow:add_text(val[1] .. " - " .. val[2] .. "  " .. key .. "  " .. val[3])
     end
     W2GWindow:draw()
-    Note("data processed")
+    Note("Where2Grind updated")
 end
 
 function matched(matcj)
@@ -205,16 +245,29 @@ function OnPluginBroadcast (msg, id, name, text)
    world_file_version="15"
   >
   <trigger
-   enabled="y"
+   enabled="n"
    group="table_capture"
+   name="w2g_trigger_start"
    match="Top \d+ most popular kills for levels \d+ to \d+"
    omit_from_output="y"
    regexp="y"
+   send_to="12"
    sequence="100"
   >
+  <send>BeginCapture()</send>
   </trigger>
   <trigger
-   enabled="y"
+    enabled="n"
+    group="table_capture"
+    name="clearnewlines"
+    match="^$"
+    omit_from_output="y"
+    regexp="y"
+    sequence="101"
+    >
+    </trigger>
+  <trigger
+   enabled="n"
    group="table_capture"
    match="No.   Mob name                                Level  Area Name            Killed"
    omit_from_output="y"
@@ -222,7 +275,7 @@ function OnPluginBroadcast (msg, id, name, text)
   >
   </trigger>
   <trigger
-   enabled="y"
+   enabled="n"
    group="table_capture"
    match="---   --------------------------------------- -----  -------------------- ------"
    omit_from_output="y"
@@ -230,7 +283,7 @@ function OnPluginBroadcast (msg, id, name, text)
   >
   </trigger>
   <trigger
-   enabled="y"
+   enabled="n"
    group="table_capture"
    match="([0-9]+)  (([,'\-\w]\s?)+)(?<!\s)"
    omit_from_output="y"
@@ -241,7 +294,7 @@ function OnPluginBroadcast (msg, id, name, text)
   <send>CaptureMobdeath("%1","%2")</send>
   </trigger>
   <trigger
-   enabled="y"
+   enabled="n"
    group="table_capture"
    match="-------------------------------------[ THE END ]--------------------------------"
    omit_from_output="y"
@@ -249,7 +302,7 @@ function OnPluginBroadcast (msg, id, name, text)
   >
   </trigger>
   <trigger
-   enabled="y"
+   enabled="n"
    group="table_capture"
    match="See also: Mobkills, Areakills and Areadeaths commands."
    omit_from_output="y"
