@@ -32,7 +32,13 @@
 <script>
 <![CDATA[
 
+
+
 require 'gmcphelper'
+http = require("socket.http")
+https = require("ssl.https")
+--json = require ("dkjson")
+ltn12 = require("ltn12")
 
 db = "InquisitorDB"
 mob = {}
@@ -47,6 +53,40 @@ function ToggleDebug()
     Note("Debug mode enabled")
   end
   debug = not debug
+end
+
+function PoopFunc()
+  Note("poop")
+end
+
+function TestHTTP()
+  Note("Checking connection to the online database...")
+  bodytable = {
+  sql = "SELECT * FROM mobs",
+  database = "inquisitor.sqlite"
+  }
+  bodystring = [[{
+  "sql": "SELECT * FROM mobs",
+  "database": "inquisitor.sqlite"
+  }]]
+  --body = json.encode (bodytable, { indent = true })
+  respbody = {}
+  result, respcode, respheaders, respstatus = https.request {
+      method = "POST",
+      url = "https://cgop8sf0hz.g3.sqlite.cloud/v2/weblite/sql",
+      source = ltn12.source.string(bodystring),
+      headers = {
+          ["authorization"] = "Bearer sqlitecloud://cgop8sf0hz.g3.sqlite.cloud:8860?apikey=4MxImOlEzZJTXEPeA396qzEtrmuuQcvU2v10Hkp0RyI",
+          ["content-type"] = "application/json",
+          ["content-length"] = tostring(#bodystring)
+      },
+      sink = ltn12.sink.table(respbody)
+  }
+  
+  --respbody = table.concat(respbody)
+
+
+  --Note("HTTP result: " .. dump(respbody[1]))
 end
 
 function IfCatalogued(uniqid)
@@ -111,6 +151,7 @@ function OnPluginInstall()
   Note("InquisitorDB installed.")
   GenTable() -- might throw an error rn
   ResetMob()
+  TestHTTP()
 end
 
 function WipeDB()
@@ -266,7 +307,7 @@ function PostEntry()
       mob.uniqid, mob.partial, mob.name, mob.room, mob.zone, mob.level, mob.guild, mob.subclass, mob.identical, mob.hp, mob.alignment, mob.sortedresists, mob.bash, mob.pierce, mob.slash, mob.acid, mob.air, mob.cold, mob.disease, mob.earth, mob.energy, mob.fire, mob.holy, mob.light, mob.electric, mob.magic, mob.mental, mob.negative, mob.poison, mob.shadow, mob.sonic, mob.water, mob.contributor))
     
     if inquisitor:errmsg() == "not an error" then
-        Note("Mob info for " .. mob.name .. " successfully captured to database.")
+        Note("Mob info for \"" .. mob.name .. "\" successfully captured to database.")
     else
         Note("Database error: " .. inquisitor:errmsg())
         Note("Mob data dump: " .. dump(mob))
@@ -274,7 +315,7 @@ function PostEntry()
     
     end
   else
-    Note("Mob already captured to database.")
+    Note("Mob already in database.")
   end
   
   -- Fourth, handle database errors. We're silencing duplicate entry errors for now
@@ -303,6 +344,8 @@ function dump(o)
       return tostring(o)
    end
 end
+
+
 
 ]]>
 </script>
@@ -333,6 +376,14 @@ end
    sequence="100"
   >
     <send>WipeDB()</send>
+  </alias>
+  <alias
+   match="inq-thttp"
+   enabled="y"
+   send_to="12"
+   sequence="100"
+  >
+    <send>TestHTTP()</send>
   </alias>
   <alias
    match="inq-tquery"
@@ -407,7 +458,7 @@ end
   <trigger
    enabled="n"
    group="capture_entry"
-   match="Mob Short Name   : (([,'\-\w]\s?)+)$"
+   match="Mob Short Name   : (([,'\-\w\.]\s?)+)$"
    omit_from_output="y"
    regexp="y"
    send_to="12"
